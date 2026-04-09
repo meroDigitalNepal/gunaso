@@ -1,48 +1,67 @@
-const fs = require('fs');
-const path = require('path');
+require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
 
-const DATA_FILE = path.join(__dirname, '../data/submissions.json');
+const prisma = new PrismaClient();
 
-function readAll() {
-  if (!fs.existsSync(DATA_FILE)) return [];
+async function getAll() {
   try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch {
-    return [];
+    return await prisma.submission.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+    throw error;
   }
 }
 
-function writeAll(submissions) {
-  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(submissions, null, 2), 'utf8');
+async function getById(id) {
+  try {
+    return await prisma.submission.findUnique({
+      where: { id },
+    });
+  } catch (error) {
+    console.error('Error fetching submission by ID:', error);
+    throw error;
+  }
 }
 
-function getAll() {
-  return readAll();
+async function getByTrackingId(trackingId) {
+  try {
+    return await prisma.submission.findUnique({
+      where: { trackingId },
+    });
+  } catch (error) {
+    console.error('Error fetching submission by tracking ID:', error);
+    throw error;
+  }
 }
 
-function getById(id) {
-  return readAll().find(s => s.id === id) || null;
+async function create(submission) {
+  try {
+    return await prisma.submission.create({
+      data: submission,
+    });
+  } catch (error) {
+    console.error('Error creating submission:', error);
+    throw error;
+  }
 }
 
-function getByTrackingId(trackingId) {
-  return readAll().find(s => s.trackingId === trackingId) || null;
-}
-
-function create(submission) {
-  const submissions = readAll();
-  submissions.push(submission);
-  writeAll(submissions);
-  return submission;
-}
-
-function update(id, updates) {
-  const submissions = readAll();
-  const idx = submissions.findIndex(s => s.id === id);
-  if (idx === -1) return null;
-  submissions[idx] = { ...submissions[idx], ...updates, updatedAt: new Date().toISOString() };
-  writeAll(submissions);
-  return submissions[idx];
+async function update(id, updates) {
+  try {
+    return await prisma.submission.update({
+      where: { id },
+      data: updates,
+    });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return null; // Not found
+    }
+    console.error('Error updating submission:', error);
+    throw error;
+  }
 }
 
 module.exports = { getAll, getById, getByTrackingId, create, update };
+
+

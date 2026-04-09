@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const submissionsRouter = require('./routes/submissions');
@@ -10,8 +11,16 @@ app.use(express.json());
 
 app.use('/api/submissions', submissionsRouter);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.listen(PORT, () => {
-  console.log(`Gunaso server running on http://localhost:${PORT}`);
+  console.log(`Gunaso server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });
 
 module.exports = app;
+
+
