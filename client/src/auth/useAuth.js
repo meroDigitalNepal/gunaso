@@ -9,7 +9,7 @@ export function useAuth() {
   function login() {
     return instance.loginPopup({
       ...apiRequest,
-      redirectUri: window.location.origin + import.meta.env.BASE_URL + 'auth-redirect.html',
+      redirectUri: window.location.origin + import.meta.env.BASE_URL + 'redirect.html',
     });
   }
 
