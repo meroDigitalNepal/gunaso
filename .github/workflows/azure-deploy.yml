@@ -1,15 +1,15 @@
-name: Deploy Parliamentarian App
+name: Deploy MP App
 
 on:
   push:
     branches:
-      - 'parl/**'
+      - 'mp/**'
   workflow_dispatch:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Extract the parliamentarian name from the branch name.
-  # parl/abc  →  abc
+  # Extract the MP name from the branch name.
+  # mp/sasmit  →  sasmit
   # This name is used as the GitHub Environment, so each job pulls secrets
   # from the matching environment.
   # ---------------------------------------------------------------------------
@@ -17,11 +17,11 @@ jobs:
     name: Resolve environment
     runs-on: ubuntu-latest
     outputs:
-      parliamentarian: ${{ steps.extract.outputs.parliamentarian }}
+      mp: ${{ steps.extract.outputs.mp }}
     steps:
-      - name: Extract parliamentarian name from branch
+      - name: Extract MP name from branch
         id: extract
-        run: echo "parliamentarian=${GITHUB_REF_NAME#parl/}" >> $GITHUB_OUTPUT
+        run: echo "mp=${GITHUB_REF_NAME#mp/}" >> $GITHUB_OUTPUT
 
   # ---------------------------------------------------------------------------
   # Build a multi-stage Docker image (frontend + server), run migrations,
@@ -44,10 +44,10 @@ jobs:
   # and are NOT re-set on each deploy — only the image is updated here.
   # ---------------------------------------------------------------------------
   deploy:
-    name: Deploy (${{ needs.resolve-env.outputs.parliamentarian }})
+    name: Deploy (${{ needs.resolve-env.outputs.mp }})
     needs: resolve-env
     runs-on: ubuntu-latest
-    environment: ${{ needs.resolve-env.outputs.parliamentarian }}
+    environment: ${{ needs.resolve-env.outputs.mp }}
 
     steps:
       - name: Checkout
@@ -77,8 +77,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.ACR_LOGIN_SERVER }}/gunaso-${{ needs.resolve-env.outputs.parliamentarian }}:${{ github.sha }}
-            ${{ secrets.ACR_LOGIN_SERVER }}/gunaso-${{ needs.resolve-env.outputs.parliamentarian }}:latest
+            ${{ secrets.ACR_LOGIN_SERVER }}/gunaso-${{ needs.resolve-env.outputs.mp }}:${{ github.sha }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/gunaso-${{ needs.resolve-env.outputs.mp }}:latest
           build-args: |
             VITE_ENTRA_CLIENT_ID=${{ secrets.ENTRA_CLIENT_ID }}
             VITE_ENTRA_AUTHORITY=${{ secrets.VITE_ENTRA_AUTHORITY }}
@@ -110,4 +110,4 @@ jobs:
             az containerapp update \
               --name ${{ secrets.AZURE_CONTAINER_APP_NAME }} \
               --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-              --image ${{ secrets.ACR_LOGIN_SERVER }}/gunaso-${{ needs.resolve-env.outputs.parliamentarian }}:${{ github.sha }}
+              --image ${{ secrets.ACR_LOGIN_SERVER }}/gunaso-${{ needs.resolve-env.outputs.mp }}:${{ github.sha }}

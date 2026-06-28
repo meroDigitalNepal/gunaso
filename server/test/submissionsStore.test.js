@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { createSubmissionsStore } = require('../store/submissionsStore');
 
-const PARLIAMENTARIAN_ID = 'parl-001';
+const MP_ID = 'parl-001';
 
 function createMockPool(result) {
   const calls = [];
@@ -16,12 +16,12 @@ function createMockPool(result) {
   };
 }
 
-test('store getAll scopes to parliamentarianId and applies filters', async () => {
+test('store getAll scopes to mpId and applies filters', async () => {
   const pool = createMockPool({ rows: [
     {
       id: 'sub-1',
       tracking_id: 'tracking-1',
-      parliamentarian_id: PARLIAMENTARIAN_ID,
+      mp_id: MP_ID,
       title: 'Clinic issue',
       category: 'health',
       description: 'Needs review',
@@ -35,35 +35,35 @@ test('store getAll scopes to parliamentarianId and applies filters', async () =>
   ] });
 
   const store = createSubmissionsStore(pool);
-  const results = await store.getAll(PARLIAMENTARIAN_ID, { status: 'new', category: 'health' });
+  const results = await store.getAll(MP_ID, { status: 'new', category: 'health' });
 
   assert.equal(results.length, 1);
   assert.equal(results[0].trackingId, 'tracking-1');
-  assert.equal(results[0].parliamentarianId, undefined, 'parliamentarianId should not leak to camelCase output');
+  assert.equal(results[0].mpId, undefined, 'mpId should not leak to camelCase output');
 
   const { sql, params } = pool.calls[0];
-  assert.match(sql, /WHERE parliamentarian_id = \$1/);
+  assert.match(sql, /WHERE mp_id = \$1/);
   assert.match(sql, /status = \$2/);
   assert.match(sql, /category = \$3/);
-  assert.deepEqual(params, [PARLIAMENTARIAN_ID, 'new', 'health']);
+  assert.deepEqual(params, [MP_ID, 'new', 'health']);
 });
 
-test('store getAll with no filters only scopes by parliamentarianId', async () => {
+test('store getAll with no filters only scopes by mpId', async () => {
   const pool = createMockPool({ rows: [] });
   const store = createSubmissionsStore(pool);
 
-  await store.getAll(PARLIAMENTARIAN_ID);
+  await store.getAll(MP_ID);
 
   const { sql, params } = pool.calls[0];
-  assert.match(sql, /WHERE parliamentarian_id = \$1/);
+  assert.match(sql, /WHERE mp_id = \$1/);
   assert.equal(params.length, 1);
 });
 
-test('store create inserts with parliamentarian_id and returns camelCase', async () => {
+test('store create inserts with mp_id and returns camelCase', async () => {
   const submissionRow = {
     id: 'sub-1',
     tracking_id: 'tracking-1',
-    parliamentarian_id: PARLIAMENTARIAN_ID,
+    mp_id: MP_ID,
     title: 'Pothole',
     category: 'infrastructure',
     description: 'Large pothole.',
@@ -77,7 +77,7 @@ test('store create inserts with parliamentarian_id and returns camelCase', async
   const pool = createMockPool({ rows: [submissionRow] });
   const store = createSubmissionsStore(pool);
 
-  const result = await store.create(PARLIAMENTARIAN_ID, {
+  const result = await store.create(MP_ID, {
     id: 'sub-1',
     trackingId: 'tracking-1',
     title: 'Pothole',
@@ -96,15 +96,15 @@ test('store create inserts with parliamentarian_id and returns camelCase', async
   const { sql, params } = pool.calls[0];
   assert.match(sql, /INSERT INTO submissions/);
   assert.match(sql, /RETURNING \*/);
-  assert.ok(params.includes(PARLIAMENTARIAN_ID), 'parliamentarian_id must be in INSERT params');
+  assert.ok(params.includes(MP_ID), 'mp_id must be in INSERT params');
 });
 
-test('store update scopes WHERE clause to parliamentarianId', async () => {
+test('store update scopes WHERE clause to mpId', async () => {
   const pool = createMockPool({ rows: [
     {
       id: 'sub-1',
       tracking_id: 'tracking-1',
-      parliamentarian_id: PARLIAMENTARIAN_ID,
+      mp_id: MP_ID,
       title: 'Water leak',
       category: 'infrastructure',
       description: 'Leak near the park.',
@@ -118,43 +118,43 @@ test('store update scopes WHERE clause to parliamentarianId', async () => {
   ] });
   const store = createSubmissionsStore(pool);
 
-  const result = await store.update(PARLIAMENTARIAN_ID, 'sub-1', { status: 'resolved', publicResponse: 'Fixed.' });
+  const result = await store.update(MP_ID, 'sub-1', { status: 'resolved', publicResponse: 'Fixed.' });
 
   assert.equal(result.status, 'resolved');
 
   const { sql, params } = pool.calls[0];
-  assert.match(sql, /WHERE id = \$\d+ AND parliamentarian_id = \$\d+/);
+  assert.match(sql, /WHERE id = \$\d+ AND mp_id = \$\d+/);
   assert.ok(params.includes('sub-1'));
-  assert.ok(params.includes(PARLIAMENTARIAN_ID));
+  assert.ok(params.includes(MP_ID));
 });
 
 test('store update returns null when no rows matched', async () => {
   const pool = createMockPool({ rows: [] });
   const store = createSubmissionsStore(pool);
 
-  const result = await store.update(PARLIAMENTARIAN_ID, 'missing-id', { status: 'resolved' });
+  const result = await store.update(MP_ID, 'missing-id', { status: 'resolved' });
 
   assert.equal(result, null);
 });
 
-test('store getById scopes to parliamentarianId', async () => {
+test('store getById scopes to mpId', async () => {
   const pool = createMockPool({ rows: [] });
   const store = createSubmissionsStore(pool);
 
-  await store.getById(PARLIAMENTARIAN_ID, 'sub-1');
+  await store.getById(MP_ID, 'sub-1');
 
   const { sql, params } = pool.calls[0];
-  assert.match(sql, /WHERE id = \$1 AND parliamentarian_id = \$2/);
-  assert.deepEqual(params, ['sub-1', PARLIAMENTARIAN_ID]);
+  assert.match(sql, /WHERE id = \$1 AND mp_id = \$2/);
+  assert.deepEqual(params, ['sub-1', MP_ID]);
 });
 
-test('store getByTrackingId scopes to parliamentarianId', async () => {
+test('store getByTrackingId scopes to mpId', async () => {
   const pool = createMockPool({ rows: [] });
   const store = createSubmissionsStore(pool);
 
-  await store.getByTrackingId(PARLIAMENTARIAN_ID, 'TRACK-001');
+  await store.getByTrackingId(MP_ID, 'TRACK-001');
 
   const { sql, params } = pool.calls[0];
-  assert.match(sql, /WHERE tracking_id = \$1 AND parliamentarian_id = \$2/);
-  assert.deepEqual(params, ['TRACK-001', PARLIAMENTARIAN_ID]);
+  assert.match(sql, /WHERE tracking_id = \$1 AND mp_id = \$2/);
+  assert.deepEqual(params, ['TRACK-001', MP_ID]);
 });

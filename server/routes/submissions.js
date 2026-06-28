@@ -37,7 +37,7 @@ function createSubmissionsRouter(store = defaultStore, { resolveTenantMiddleware
     };
 
     try {
-      const created = await store.create(req.parliamentarian.id, submission);
+      const created = await store.create(req.mp.id, submission);
       res.status(201).json(created);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -51,7 +51,7 @@ function createSubmissionsRouter(store = defaultStore, { resolveTenantMiddleware
       const filters = {};
       if (status) filters.status = status;
       if (category) filters.category = category;
-      const submissions = await store.getAll(req.parliamentarian.id, filters);
+      const submissions = await store.getAll(req.mp.id, filters);
       res.json(submissions);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -62,7 +62,7 @@ function createSubmissionsRouter(store = defaultStore, { resolveTenantMiddleware
   router.get('/track/:trackingId', resolveTenantMiddleware, async (req, res) => {
     try {
       const submission = await store.getByTrackingId(
-        req.parliamentarian.id,
+        req.mp.id,
         req.params.trackingId.toUpperCase(),
       );
       if (!submission) return res.status(404).json({ error: 'Submission not found' });
@@ -77,7 +77,7 @@ function createSubmissionsRouter(store = defaultStore, { resolveTenantMiddleware
   // GET /api/submissions/:id — admin only
   router.get('/:id', resolveTenantMiddleware, requireAuth, requireRole('staff'), async (req, res) => {
     try {
-      const submission = await store.getById(req.parliamentarian.id, req.params.id);
+      const submission = await store.getById(req.mp.id, req.params.id);
       if (!submission) return res.status(404).json({ error: 'Submission not found' });
       res.json(submission);
     } catch (err) {
@@ -102,7 +102,7 @@ function createSubmissionsRouter(store = defaultStore, { resolveTenantMiddleware
     if (internalNotes !== undefined) updates.internalNotes = internalNotes;
 
     try {
-      const updated = await store.update(req.parliamentarian.id, req.params.id, updates);
+      const updated = await store.update(req.mp.id, req.params.id, updates);
       if (!updated) return res.status(404).json({ error: 'Submission not found' });
       res.json(updated);
     } catch (err) {

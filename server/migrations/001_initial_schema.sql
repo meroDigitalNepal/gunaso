@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS parliamentarians (
+CREATE TABLE IF NOT EXISTS mps (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT        NOT NULL,
   subdomain   TEXT        UNIQUE NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS parliamentarians (
 CREATE TABLE IF NOT EXISTS users (
   id                  UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
   entra_oid           TEXT  UNIQUE NOT NULL,
-  parliamentarian_id  UUID  NOT NULL REFERENCES parliamentarians(id),
+  mp_id               UUID  NOT NULL REFERENCES mps(id),
   role                TEXT  NOT NULL DEFAULT 'staff'
                             CHECK (role IN ('admin', 'staff')),
   created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS submissions (
   id                  UUID        PRIMARY KEY,
   tracking_id         TEXT        UNIQUE NOT NULL,
-  parliamentarian_id  UUID        NOT NULL REFERENCES parliamentarians(id),
+  mp_id               UUID        NOT NULL REFERENCES mps(id),
   title               TEXT        NOT NULL,
   category            TEXT        NOT NULL
                                   CHECK (category IN ('infrastructure', 'health', 'education', 'security', 'other')),
@@ -31,11 +31,11 @@ CREATE TABLE IF NOT EXISTS submissions (
   internal_notes      TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_submissions_parliamentarian
-  ON submissions(parliamentarian_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_mp
+  ON submissions(mp_id);
 
-CREATE INDEX IF NOT EXISTS idx_submissions_parliamentarian_status
-  ON submissions(parliamentarian_id, status);
+CREATE INDEX IF NOT EXISTS idx_submissions_mp_status
+  ON submissions(mp_id, status);
 
-CREATE INDEX IF NOT EXISTS idx_submissions_parliamentarian_created
-  ON submissions(parliamentarian_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_submissions_mp_created
+  ON submissions(mp_id, created_at DESC);

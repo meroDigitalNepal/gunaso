@@ -8,8 +8,8 @@
 #   gh auth login
 #
 # After this script finishes, run:
-#   ./infra/add-parliamentarian.sh <name> <uuid>
-# for each parliamentarian to create their Container App.
+#   ./infra/add-mp.sh <name> <uuid>
+# for each MP to create their Container App.
 
 set -euo pipefail
 
@@ -183,9 +183,9 @@ echo "  Entra scope       : $ENTRA_SCOPE"
 echo "  ACR login server  : $ACR_LOGIN_SERVER"
 echo ""
 echo "Next steps:"
-echo "  1. Add a SPA redirect URI per parliamentarian subdomain:"
+echo "  1. Add a SPA redirect URI per MP subdomain:"
 echo "     Portal → Entra ID → App registrations → $ENTRA_APP_NAME → Authentication"
 echo "     Add: https://<subdomain>.sachivalaya.org/gunaso/"
 echo ""
-echo "  2. Add each parliamentarian:"
-echo "     ./infra/add-parliamentarian.sh <name> \"\$(uuidgen | tr '[:upper:]' '[:lower:]')\""
+echo "  2. Add each MP:"
+echo "     ./infra/add-mp.sh <name> \"\$(uuidgen | tr '[:upper:]' '[:lower:]')\""

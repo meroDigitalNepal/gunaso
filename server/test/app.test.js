@@ -4,11 +4,11 @@ const request = require('supertest');
 
 const createApp = require('../index');
 
-const PARLIAMENTARIAN_ID = 'test-parliamentarian-id';
+const MP_ID = 'test-parliamentarian-id';
 
-// Injects a fixed parliamentarian onto every request — avoids a real DB lookup in HTTP tests.
+// Injects a fixed MP onto every request — avoids a real DB lookup in HTTP tests.
 function mockTenant(req, res, next) {
-  req.parliamentarian = { id: PARLIAMENTARIAN_ID, name: 'Test MP', subdomain: 'test' };
+  req.mp = { id: MP_ID, name: 'Test MP', subdomain: 'test' };
   next();
 }
 
@@ -18,28 +18,28 @@ function createMemoryStore(initialSubmissions = []) {
   return {
     submissions,
     lastFilters: null,
-    async getAll(parliamentarianId, filters = {}) {
+    async getAll(mpId, filters = {}) {
       this.lastFilters = filters;
       return submissions.filter(s => {
-        if (s.parliamentarianId !== parliamentarianId) return false;
+        if (s.mpId !== mpId) return false;
         if (filters.status && s.status !== filters.status) return false;
         if (filters.category && s.category !== filters.category) return false;
         return true;
       });
     },
-    async getById(parliamentarianId, id) {
-      return submissions.find(s => s.id === id && s.parliamentarianId === parliamentarianId) || null;
+    async getById(mpId, id) {
+      return submissions.find(s => s.id === id && s.mpId === mpId) || null;
     },
-    async getByTrackingId(parliamentarianId, trackingId) {
-      return submissions.find(s => s.trackingId === trackingId && s.parliamentarianId === parliamentarianId) || null;
+    async getByTrackingId(mpId, trackingId) {
+      return submissions.find(s => s.trackingId === trackingId && s.mpId === mpId) || null;
     },
-    async create(parliamentarianId, submission) {
-      const entry = { ...submission, parliamentarianId };
+    async create(mpId, submission) {
+      const entry = { ...submission, mpId };
       submissions.push(entry);
       return entry;
     },
-    async update(parliamentarianId, id, updates) {
-      const index = submissions.findIndex(s => s.id === id && s.parliamentarianId === parliamentarianId);
+    async update(mpId, id, updates) {
+      const index = submissions.findIndex(s => s.id === id && s.mpId === mpId);
       if (index === -1) return null;
       submissions[index] = { ...submissions[index], ...updates, updatedAt: new Date().toISOString() };
       return submissions[index];
@@ -67,7 +67,7 @@ test('POST /api/submissions creates a new submission with defaults', async () =>
   assert.equal(response.body.publicResponse, null);
   assert.equal(response.body.internalNotes, null);
   assert.equal(store.submissions.length, 1);
-  assert.equal(store.submissions[0].parliamentarianId, PARLIAMENTARIAN_ID);
+  assert.equal(store.submissions[0].mpId, MP_ID);
 });
 
 test('POST /api/submissions rejects invalid categories before writing', async () => {
@@ -92,7 +92,7 @@ test('GET /api/submissions passes dashboard filters to the store', async () => {
     {
       id: 'matching',
       trackingId: 'tracking-1',
-      parliamentarianId: PARLIAMENTARIAN_ID,
+      mpId: MP_ID,
       title: 'Clinic issue',
       category: 'health',
       description: 'Needs review',
@@ -106,7 +106,7 @@ test('GET /api/submissions passes dashboard filters to the store', async () => {
     {
       id: 'other-status',
       trackingId: 'tracking-2',
-      parliamentarianId: PARLIAMENTARIAN_ID,
+      mpId: MP_ID,
       title: 'Resolved clinic issue',
       category: 'health',
       description: 'Already resolved',
@@ -141,7 +141,7 @@ test('GET /api/submissions/track/:trackingId hides internal-only fields', async 
     {
       id: 'abc-123',
       trackingId: 'GUN-ABCDE',
-      parliamentarianId: PARLIAMENTARIAN_ID,
+      mpId: MP_ID,
       title: 'Noise complaint',
       category: 'other',
       description: 'Night construction noise.',
@@ -169,7 +169,7 @@ test('PATCH /api/submissions/:id is protected and returns 401 without a token', 
     {
       id: 'case-1',
       trackingId: 'tracking-1',
-      parliamentarianId: PARLIAMENTARIAN_ID,
+      mpId: MP_ID,
       title: 'Water leak',
       category: 'infrastructure',
       description: 'Leak near the park.',

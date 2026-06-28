@@ -30,7 +30,7 @@ function getSigningKey(header, callback) {
 }
 
 // Verifies the Entra JWT, looks up the user in the local DB, and ensures the
-// user belongs to the same parliamentarian resolved by the tenant middleware.
+// user belongs to the same MP resolved by the tenant middleware.
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -54,7 +54,7 @@ async function requireAuth(req, res, next) {
 
       try {
         const { rows } = await getPool().query(
-          'SELECT id, parliamentarian_id, role FROM users WHERE entra_oid = $1',
+          'SELECT id, mp_id, role FROM users WHERE entra_oid = $1',
           [decoded.oid],
         );
 
@@ -64,8 +64,8 @@ async function requireAuth(req, res, next) {
 
         const user = rows[0];
 
-        // The token's tenant must match the subdomain's parliamentarian
-        if (user.parliamentarian_id !== req.parliamentarian.id) {
+        // The token's tenant must match the subdomain's MP
+        if (user.mp_id !== req.mp.id) {
           return res.status(403).json({ error: 'Access denied for this tenant.' });
         }
 
