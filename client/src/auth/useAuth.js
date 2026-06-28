@@ -7,7 +7,10 @@ export function useAuth() {
   const user = accounts[0] ?? null;
 
   function login() {
-    return instance.loginPopup(apiRequest);
+    return instance.loginPopup({
+      ...apiRequest,
+      redirectUri: window.location.origin + import.meta.env.BASE_URL + 'auth-redirect.html',
+    });
   }
 
   function logout() {
