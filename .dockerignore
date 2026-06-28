@@ -1,0 +1,12 @@
+**/node_modules
+client/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/test/
+**/*.test.js
+server/data/
+.git
+.gitignore
+.github/
+infra/

@@ -1,6 +1,9 @@
+// In dev, call Express directly on port 3001 (bypasses Vite proxy).
+// In production, BASE_URL is '/gunaso/' (set by vite.config.js base), giving '/gunaso'
+// as the prefix — API calls become /gunaso/api/... which the Container App handles.
 const BASE = import.meta.env.DEV
   ? 'http://localhost:3001'
-  : import.meta.env.VITE_API_BASE_URL || '';
+  : import.meta.env.BASE_URL.replace(/\/$/, '');
 
 let tokenGetter = null;
 

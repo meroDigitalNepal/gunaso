@@ -17,7 +17,8 @@ services:
 
   migrate:
     build:
-      context: ./server
+      context: .
+      target: development
     command: node migrate.js
     environment:
       DATABASE_URL: postgresql://gunaso:gunaso@db:5432/gunaso
@@ -29,7 +30,8 @@ services:
 
   server:
     build:
-      context: ./server
+      context: .
+      target: development
     ports:
       - "3001:3001"
     # Non-sensitive overrides are inline; put ENTRA_* and PARLIAMENTARIAN_ID in server/.env

@@ -8,7 +8,7 @@
 #
 # After this script finishes, run:
 #   ./infra/add-parliamentarian.sh <name> <uuid>
-# for each parliamentarian to create their Container App and Static Web App.
+# for each parliamentarian to create their Container App.
 
 set -euo pipefail
 
@@ -16,7 +16,6 @@ set -euo pipefail
 RESOURCE_GROUP="gunaso-rg"
 LOCATION="centralindia"        # Closest Azure region to Nepal; change if needed
 ACR_NAME="gunasoregistry"      # Must be globally unique; lowercase alphanumeric only
-LOG_ANALYTICS_WS="gunaso-logs"
 CONTAINER_ENV="gunaso-env"
 DB_SERVER="gunaso-pg"          # Must be globally unique; lowercase alphanumeric + hyphens
 DB_NAME="gunaso"
@@ -28,7 +27,7 @@ GITHUB_REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 echo "=== gunaso: provisioning shared Azure resources ==="
 echo "Resource group : $RESOURCE_GROUP ($LOCATION)"
 echo "ACR            : $ACR_NAME"
-echo "PostgreSQL     : $DB_SERVER.$LOCATION"
+echo "PostgreSQL     : $DB_SERVER"
 echo "GitHub repo    : $GITHUB_REPO"
 echo ""
 
@@ -37,11 +36,11 @@ echo ""
 echo ""
 
 # 1. Resource group ─────────────────────────────────────────────────────────
-echo "→ [1/8] Creating resource group..."
+echo "→ [1/7] Creating resource group..."
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" --output none
 
 # 2. Container Registry ─────────────────────────────────────────────────────
-echo "→ [2/8] Creating Azure Container Registry..."
+echo "→ [2/7] Creating Azure Container Registry..."
 az acr create \
   --resource-group "$RESOURCE_GROUP" \
   --name "$ACR_NAME" \
@@ -53,35 +52,16 @@ ACR_LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
 ACR_USERNAME=$(az acr credential show --name "$ACR_NAME" --query username -o tsv)
 ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)
 
-# 3. Log Analytics workspace ─────────────────────────────────────────────────
-echo "→ [3/8] Creating Log Analytics workspace..."
-az monitor log-analytics workspace create \
-  --resource-group "$RESOURCE_GROUP" \
-  --workspace-name "$LOG_ANALYTICS_WS" \
-  --location "$LOCATION" \
-  --output none
-
-LOG_WS_ID=$(az monitor log-analytics workspace show \
-  --resource-group "$RESOURCE_GROUP" \
-  --workspace-name "$LOG_ANALYTICS_WS" \
-  --query customerId -o tsv)
-LOG_WS_KEY=$(az monitor log-analytics workspace get-shared-keys \
-  --resource-group "$RESOURCE_GROUP" \
-  --workspace-name "$LOG_ANALYTICS_WS" \
-  --query primarySharedKey -o tsv)
-
-# 4. Container Apps environment ───────────────────────────────────────────────
-echo "→ [4/8] Creating Container Apps environment..."
+# 3. Container Apps environment ───────────────────────────────────────────────
+echo "→ [3/7] Creating Container Apps environment..."
 az containerapp env create \
   --name "$CONTAINER_ENV" \
   --resource-group "$RESOURCE_GROUP" \
   --location "$LOCATION" \
-  --logs-workspace-id "$LOG_WS_ID" \
-  --logs-workspace-key "$LOG_WS_KEY" \
   --output none
 
-# 5. PostgreSQL Flexible Server ───────────────────────────────────────────────
-echo "→ [5/8] Creating PostgreSQL Flexible Server (takes ~3 minutes)..."
+# 4. PostgreSQL Flexible Server ───────────────────────────────────────────────
+echo "→ [4/7] Creating PostgreSQL Flexible Server (takes ~3 minutes)..."
 az postgres flexible-server create \
   --resource-group "$RESOURCE_GROUP" \
   --name "$DB_SERVER" \
@@ -103,8 +83,8 @@ az postgres flexible-server db create \
 
 DATABASE_URL="postgresql://${DB_ADMIN_USER}:${DB_ADMIN_PASSWORD}@${DB_SERVER}.postgres.database.azure.com:5432/${DB_NAME}?sslmode=require"
 
-# 6. Service principal for GitHub Actions ─────────────────────────────────────
-echo "→ [6/8] Creating GitHub Actions service principal..."
+# 5. Service principal for GitHub Actions ─────────────────────────────────────
+echo "→ [5/7] Creating GitHub Actions service principal..."
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 TENANT_ID=$(az account show --query tenantId -o tsv)
 
@@ -124,13 +104,14 @@ az role assignment create \
   --scope "/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${ACR_NAME}" \
   --output none 2>/dev/null || true
 
-# 7. Entra app registration for staff auth ─────────────────────────────────────
-echo "→ [7/8] Creating Entra app registration..."
+# 6. Entra app registration for staff auth ─────────────────────────────────────
+echo "→ [6/7] Creating Entra app registration..."
 APP_JSON=$(az ad app create \
   --display-name "gunaso" \
   --sign-in-audience AzureADMyOrg \
   --only-show-errors)
 ENTRA_CLIENT_ID=$(echo "$APP_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['appId'])")
+APP_OBJECT_ID=$(echo "$APP_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
 
 # Service principal so users can sign in
 az ad sp create --id "$ENTRA_CLIENT_ID" --output none 2>/dev/null || true
@@ -141,17 +122,18 @@ az ad app update \
   --identifier-uris "api://${ENTRA_CLIENT_ID}" \
   --output none
 
-# Add a redirect URI for popup login (add more per environment as you deploy)
-az ad app update \
-  --id "$ENTRA_CLIENT_ID" \
-  --web-redirect-uris "http://localhost:5173" \
-  --output none
+# Register localhost as a SPA redirect URI (PKCE flow — required for loginPopup)
+# Using Graph API directly because az cli does not have --spa-redirect-uris
+az rest --method PATCH \
+  --uri "https://graph.microsoft.com/v1.0/applications/${APP_OBJECT_ID}" \
+  --headers "Content-Type=application/json" \
+  --body "{\"spa\":{\"redirectUris\":[\"http://localhost:5173/\"]}}"
 
 ENTRA_AUTHORITY="https://login.microsoftonline.com/${TENANT_ID}"
 ENTRA_SCOPE="api://${ENTRA_CLIENT_ID}/.default"
 
-# 8. Set GitHub repo-level secrets ────────────────────────────────────────────
-echo "→ [8/8] Setting GitHub repo secrets..."
+# 7. Set GitHub repo-level secrets ────────────────────────────────────────────
+echo "→ [7/7] Setting GitHub repo secrets..."
 gh secret set AZURE_CLIENT_ID       --repo "$GITHUB_REPO" --body "$AZURE_CLIENT_ID"
 gh secret set AZURE_CLIENT_SECRET   --repo "$GITHUB_REPO" --body "$AZURE_CLIENT_SECRET"
 gh secret set AZURE_SUBSCRIPTION_ID --repo "$GITHUB_REPO" --body "$SUBSCRIPTION_ID"
@@ -176,9 +158,9 @@ echo "  Entra scope       : $ENTRA_SCOPE"
 echo "  ACR login server  : $ACR_LOGIN_SERVER"
 echo ""
 echo "Next steps:"
-echo "  1. Add redirect URIs for each parliamentarian's subdomain to the Entra app:"
-echo "     az ad app update --id $ENTRA_CLIENT_ID --web-redirect-uris \\"
-echo "       'http://localhost:5173' 'https://sasmit.sachivalaya.com' ..."
+echo "  1. Add a SPA redirect URI for each parliamentarian's subdomain in the Entra app:"
+echo "     Portal → Entra ID → App registrations → gunaso → Authentication"
+echo "     Add: https://<subdomain>.sachivalaya.com/gunaso/"
 echo ""
 echo "  2. Add each parliamentarian:"
 echo "     ./infra/add-parliamentarian.sh <name> \"\$(uuidgen | tr '[:upper:]' '[:lower:]')\""

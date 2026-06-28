@@ -6,19 +6,18 @@
 #   ./infra/add-parliamentarian.sh <name> <uuid>
 #
 # Example:
-#   ./infra/add-parliamentarian.sh sasmit "$(uuidgen | tr '[:upper:]' '[:lower:]')"
+#   ./infra/add-parliamentarian.sh john "$(uuidgen | tr '[:upper:]' '[:lower:]')"
 #
 # What this script does:
-#   1. Creates an Azure Container App for the backend
-#   2. Creates an Azure Static Web App for the frontend
-#   3. Creates a GitHub environment and sets its secrets
-#   4. Creates the parl/<name> branch and pushes it
+#   1. Creates an Azure Container App for the backend + frontend
+#   2. Creates a GitHub environment and sets its secrets
+#   3. Creates the parl/<name> branch and pushes it
 
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
   echo "Usage: $0 <parliamentarian-name> <parliamentarian-uuid>"
-  echo "  Example: $0 sasmit 550e8400-e29b-41d4-a716-446655440000"
+  echo "  Example: $0 john 550e8400-e29b-41d4-a716-446655440000"
   exit 1
 fi
 
@@ -33,12 +32,10 @@ ACR_NAME="gunasoregistry"
 # ─────────────────────────────────────────────────────────────────────────────
 
 CONTAINER_APP_NAME="gunaso-${PARLIAMENTARIAN}"
-STATIC_APP_NAME="gunaso-${PARLIAMENTARIAN}-web"
 GITHUB_REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 
 echo "=== Adding parliamentarian: ${PARLIAMENTARIAN} ==="
 echo "Container App : $CONTAINER_APP_NAME"
-echo "Static Web App: $STATIC_APP_NAME"
 echo "GitHub env    : $PARLIAMENTARIAN"
 echo ""
 
@@ -55,9 +52,8 @@ ENTRA_CLIENT_ID=$(az ad app list --display-name "gunaso" --query "[0].appId" -o 
 ENTRA_TENANT_ID=$(az account show --query tenantId -o tsv)
 
 # 1. Create Container App ─────────────────────────────────────────────────────
-echo "→ [1/4] Creating Container App..."
+echo "→ [1/3] Creating Container App..."
 
-# Store sensitive values as Container App secrets (encrypted at rest)
 az containerapp create \
   --name "$CONTAINER_APP_NAME" \
   --resource-group "$RESOURCE_GROUP" \
@@ -91,30 +87,15 @@ CONTAINER_APP_FQDN=$(az containerapp show \
 
 echo "   Container App URL: https://$CONTAINER_APP_FQDN"
 
-# 2. Create Static Web App ─────────────────────────────────────────────────────
-echo "→ [2/4] Creating Static Web App..."
-az staticwebapp create \
-  --name "$STATIC_APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --location "eastasia" \
-  --sku Free \
-  --output none
-
-STATIC_WEB_APP_TOKEN=$(az staticwebapp secrets list \
-  --name "$STATIC_APP_NAME" \
-  --resource-group "$RESOURCE_GROUP" \
-  --query "properties.apiKey" -o tsv)
-
-# 3. Set GitHub environment secrets ───────────────────────────────────────────
-echo "→ [3/4] Creating GitHub environment and setting secrets..."
+# 2. Create GitHub environment and set secrets ─────────────────────────────────
+echo "→ [2/3] Creating GitHub environment and setting secrets..."
 gh api --method PUT "repos/${GITHUB_REPO}/environments/${PARLIAMENTARIAN}" --silent
 
-gh secret set AZURE_CONTAINER_APP_NAME       --env "$PARLIAMENTARIAN" --repo "$GITHUB_REPO" --body "$CONTAINER_APP_NAME"
-gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --env "$PARLIAMENTARIAN" --repo "$GITHUB_REPO" --body "$STATIC_WEB_APP_TOKEN"
-gh secret set AZURE_API_BASE_URL             --env "$PARLIAMENTARIAN" --repo "$GITHUB_REPO" --body "https://${CONTAINER_APP_FQDN}"
+gh secret set AZURE_CONTAINER_APP_NAME \
+  --env "$PARLIAMENTARIAN" --repo "$GITHUB_REPO" --body "$CONTAINER_APP_NAME"
 
-# 4. Create branch and push ───────────────────────────────────────────────────
-echo "→ [4/4] Creating branch parl/${PARLIAMENTARIAN}..."
+# 3. Create branch and push ───────────────────────────────────────────────────
+echo "→ [3/3] Creating branch parl/${PARLIAMENTARIAN}..."
 CURRENT_BRANCH=$(git branch --show-current)
 git checkout main
 git checkout -b "parl/${PARLIAMENTARIAN}" 2>/dev/null || git checkout "parl/${PARLIAMENTARIAN}"
@@ -124,13 +105,12 @@ git checkout "$CURRENT_BRANCH"
 echo ""
 echo "✅ ${PARLIAMENTARIAN} setup complete."
 echo ""
-echo "GitHub Actions will run automatically on the next push to parl/${PARLIAMENTARIAN}."
-echo "The first real image deploy will overwrite the placeholder hello-world container."
+echo "GitHub Actions will run on the next push to parl/${PARLIAMENTARIAN}."
+echo "App will be available at: https://${CONTAINER_APP_FQDN}/gunaso"
 echo ""
-echo "Once DNS and Front Door are configured, the app will be at:"
-echo "  Backend : https://${CONTAINER_APP_FQDN}"
-echo "  Frontend: (Static Web App URL from Azure Portal → $STATIC_APP_NAME)"
+echo "To add a custom domain (john.sachivalaya.com), configure it in:"
+echo "  Azure Portal → Container Apps → $CONTAINER_APP_NAME → Custom domains"
 echo ""
-echo "To add this parliamentarian's staff, insert a row into the users table:"
+echo "To add staff, insert into the users table:"
 echo "  INSERT INTO users (id, entra_oid, parliamentarian_id, role)"
 echo "  VALUES (gen_random_uuid(), '<entra-object-id>', '${PARLIAMENTARIAN_ID}', 'admin');"

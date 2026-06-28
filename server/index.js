@@ -1,9 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const defaultStore = require('./store/submissionsStore');
 const { createSubmissionsRouter } = require('./routes/submissions');
 const { resolveTenant } = require('./middleware/tenant');
+
+const STATIC_DIR = path.join(__dirname, 'public', 'gunaso');
 
 function createApp(store = defaultStore, { resolveTenantMiddleware = resolveTenant } = {}) {
   const app = express();
@@ -14,7 +17,19 @@ function createApp(store = defaultStore, { resolveTenantMiddleware = resolveTena
   }));
   app.use(express.json());
 
-  app.use('/api/submissions', createSubmissionsRouter(store, { resolveTenantMiddleware }));
+  const submissionsRouter = createSubmissionsRouter(store, { resolveTenantMiddleware });
+  // /gunaso/api — production path (browser → Container App at full URL)
+  // /api        — local dev path (Vite dev server → Express directly on port 3001)
+  app.use('/gunaso/api/submissions', submissionsRouter);
+  app.use('/api/submissions', submissionsRouter);
+
+  app.use('/gunaso', express.static(STATIC_DIR));
+  app.get('/gunaso', (req, res) => res.redirect('/gunaso/'));
+  app.get('/gunaso/*', (req, res) => {
+    res.sendFile('index.html', { root: STATIC_DIR }, (err) => {
+      if (err) res.status(404).json({ error: 'Frontend not built.' });
+    });
+  });
 
   return app;
 }
