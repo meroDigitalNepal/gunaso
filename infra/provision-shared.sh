@@ -149,13 +149,13 @@ if [[ -z "$EXISTING_APP" ]]; then
   az rest --method PATCH \
     --uri "https://graph.microsoft.com/v1.0/applications/${APP_OBJECT_ID}" \
     --headers "Content-Type=application/json" \
-    --body "{\"spa\":{\"redirectUris\":[\"http://localhost:5173/\"]}}"
+    --body "{\"spa\":{\"redirectUris\":[\"http://localhost:5173/\"]},\"api\":{\"oauth2PermissionScopes\":[{\"id\":\"$(uuidgen | tr '[:upper:]' '[:lower:]')\",\"value\":\"access_as_user\",\"adminConsentDisplayName\":\"Access gunaso as user\",\"adminConsentDescription\":\"Allows the app to access gunaso on behalf of the signed-in user\",\"userConsentDisplayName\":\"Access gunaso\",\"userConsentDescription\":\"Allows the app to access gunaso on your behalf\",\"isEnabled\":true,\"type\":\"User\"}]}}"
 else
   echo "   (already exists, skipping)"
   ENTRA_CLIENT_ID="$EXISTING_APP"
 fi
 ENTRA_AUTHORITY="https://login.microsoftonline.com/${TENANT_ID}"
-ENTRA_SCOPE="api://${ENTRA_CLIENT_ID}/.default"
+ENTRA_SCOPE="api://${ENTRA_CLIENT_ID}/access_as_user"
 
 # 7. Set GitHub repo-level secrets ────────────────────────────────────────────
 echo "→ [7/7] Setting GitHub repo secrets..."
