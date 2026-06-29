@@ -9,10 +9,10 @@ export default function Home() {
         color="var(--mero-colors-primary)"
         style={{ letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '16px' }}
       >
-        Ministry of Education &amp; Sports
+        Ministry of Education and Sports
       </Text>
       <Heading level={1} style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', letterSpacing: '-1px', lineHeight: 1.1, marginBottom: '20px' }}>
-        Your voice, heard<br />by your Minister.
+        Your voice,<br />heard by your Minister.
       </Heading>
       <Text size="lg" subtle style={{ maxWidth: '500px', margin: '0 auto 40px' }}>
         Submit questions and grievances directly to the Minister's team and track their response.
