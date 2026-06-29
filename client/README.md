@@ -23,12 +23,6 @@ component library and tokens so they look and behave consistently.
   defines the `mero-spin` / `mero-shimmer` keyframes the library references for
   its spinner and skeleton but does not ship.
 
-### React 19 peer dependency
-
-`@mero-nepal/ui` declares a React 18 peer while this app runs on React 19. The
-components only use stable React APIs, so `.npmrc` sets `legacy-peer-deps=true`
-to accept the version skew during install.
-
 ## Scripts
 
 ```bash
