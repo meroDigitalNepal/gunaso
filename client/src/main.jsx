@@ -4,8 +4,8 @@ import { ThemeProvider, LocaleProvider, createTheme } from '@mero-nepal/ui'
 import './index.css'
 import App from './App.jsx'
 
-// The whole Mero Digital Nepal suite shares the `mdn-light` design tokens.
-const theme = createTheme({ extends: 'mdn-light' })
+// Gunaso uses the `safa` theme — Mero's crisp, Apple-inspired light design tokens.
+const theme = createTheme({ extends: 'safa' })
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
