@@ -1,4 +1,4 @@
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 WORKDIR /build
 COPY client/package*.json ./
 RUN npm ci
@@ -8,7 +8,7 @@ ARG VITE_ENTRA_AUTHORITY
 ARG VITE_ENTRA_API_SCOPE
 RUN npm run build
 
-FROM node:20-alpine AS server-deps
+FROM node:22-alpine AS server-deps
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY server/package*.json ./
