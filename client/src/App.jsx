@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-react';
-import { Button } from '@mero-nepal/ui';
+import { Button, Text } from '@mero-nepal/ui';
 import AuthProvider from './auth/AuthProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './auth/useAuth';
@@ -57,6 +57,14 @@ function AppRoutes() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/dashboard/:id" element={<ProtectedRoute><RequestDetail /></ProtectedRoute>} />
       </Routes>
+      <Text
+        as="footer"
+        subtle
+        style={{ marginTop: 'auto', textAlign: 'center', fontSize: '0.8125rem', padding: '32px 24px' }}
+      >
+        Made by Nepaliहरु via{' '}
+        <a href="https://github.com/meroDigitalNepal" target="_blank" rel="noreferrer">meroDigitalNepal</a>
+      </Text>
     </>
   );
 }

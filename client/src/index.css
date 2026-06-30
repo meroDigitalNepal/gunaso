@@ -30,11 +30,24 @@ body {
   line-height: 1.5;
 }
 
-/* The ThemeProvider div owns the --mero-* tokens; make it fill the viewport. */
+/* The ThemeProvider div owns the --mero-* tokens; make it fill the viewport.
+ * Flex column + footer `margin-top: auto` is the classic sticky-footer trick:
+ * the footer is pinned to the bottom even when page content is short.
+ * LocaleProvider renders its own [dir] wrapper div between this element and the
+ * app content, so the flex column has to be carried down to that wrapper for the
+ * footer (a child of it, not of this element) to get pushed to the bottom. */
 [data-mero-theme] {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--mero-colors-surface);
   color: var(--mero-colors-text);
+}
+
+[data-mero-theme] > [dir] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes mero-spin {
@@ -93,6 +106,12 @@ nav .nav-links a {
 nav .nav-links a:hover,
 nav .nav-links a.active {
   color: var(--mero-colors-text);
+}
+
+/* Footer */
+footer a {
+  color: var(--mero-colors-primary);
+  text-decoration: none;
 }
 
 /* Table */
