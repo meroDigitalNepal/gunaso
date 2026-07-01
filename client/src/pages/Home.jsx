@@ -15,7 +15,7 @@ export default function Home() {
         Your voice,<br />heard by your Minister.
       </Heading>
       <Text size="lg" subtle style={{ maxWidth: '500px', margin: '0 auto 40px' }}>
-        Submit questions and grievances directly to the Minister's team and track their response.
+        Submit questions directly to the Minister's team.
       </Text>
       <Stack direction="row" gap="12px" justify="center" wrap>
         <Button as={Link} to="/submit" size="lg">Submit a request</Button>
