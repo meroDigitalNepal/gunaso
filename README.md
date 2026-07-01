@@ -1,6 +1,6 @@
 # Gunaso — Civic Feedback Platform
 
-Gunaso is a civic feedback platform where citizens can submit questions and complaints to their local MP (Member of Parliament), and the MP's team can process and respond to them. Citizens receive a tracking ID to follow up on a submission without needing an account.
+Gunaso is a civic feedback platform where citizens can submit questions and complaints to their **representative** — any elected official, government official, or their secretariat/office team — and that representative's team can process and respond to them. Citizens receive a tracking ID to follow up on a submission without needing an account.
 
 ## Stack
 
@@ -12,7 +12,7 @@ Gunaso is a civic feedback platform where citizens can submit questions and comp
 
 ## Architecture
 
-- **Multi-tenant by deployment.** Each MP branch runs its own deployment. Tenant identity comes from the `MP_ID` env var set per deployment (`server/middleware/tenant.js`), not from the request host.
+- **Multi-tenant by deployment.** Each representative runs their own deployment. Tenant identity comes from the `MP_ID` env var set per deployment (`server/middleware/tenant.js`), not from the request host. _(The `MP_ID` identifier is historical and represents the representative/office tenant regardless of their title.)_
 - **Role-based access.** Authenticated users carry a role (`staff` < `admin`); staff-only routes require a valid Entra token (`server/middleware/auth.js`).
 - **Dual API paths.** The submissions router is mounted at both `/api/submissions` (local dev — Vite proxies to Express) and `/gunaso/api/submissions` (production, behind the `/gunaso` base path). In production the server also serves the built client from `/gunaso`.
 
@@ -55,7 +55,7 @@ cd server && npm test
 ### Server (`server/.env`)
 | Variable | Description |
 |----------|-------------|
-| `MP_ID` | Tenant identity for this deployment (required) |
+| `MP_ID` | Tenant identity (the representative/office) for this deployment (required) |
 | `DATABASE_URL` | Postgres connection string |
 | `ENTRA_TENANT_ID` | Microsoft Entra tenant ID (token validation) |
 | `ENTRA_CLIENT_ID` | Entra app/client ID (token audience) |
@@ -86,7 +86,7 @@ All routes are mounted under both `/api/submissions` (dev) and `/gunaso/api/subm
 Provisioning helpers live in `infra/`:
 
 - `provision-shared.sh` — set up shared infrastructure
-- `add-mp.sh` — onboard a new MP tenant/deployment
+- `add-mp.sh` — onboard a new representative tenant/deployment
 - `add-staff.sh` — grant a staff member access
 
 ## Project Layout
