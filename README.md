@@ -56,6 +56,7 @@ cd server && npm test
 | Variable | Description |
 |----------|-------------|
 | `MP_ID` | Tenant identity (the representative/office) for this deployment (required) |
+| `MP_NAME` | Representative's display name, used to personalize confirmation emails |
 | `DATABASE_URL` | Postgres connection string |
 | `ENTRA_TENANT_ID` | Microsoft Entra tenant ID (token validation) |
 | `ENTRA_CLIENT_ID` | Entra app/client ID (token audience) |

@@ -6,7 +6,8 @@ function graphSendMailUrl(mailbox) {
   return `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailbox)}/sendMail`;
 }
 
-function buildConfirmationHtml({ title, trackingId, trackingUrl }) {
+function buildConfirmationHtml({ title, trackingId, trackingUrl, mpName }) {
+  const office = mpName ? `the office of ${mpName}` : 'your representative’s office';
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
@@ -16,9 +17,12 @@ function buildConfirmationHtml({ title, trackingId, trackingUrl }) {
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;padding:32px;">
             <tr>
               <td>
-                <h2 style="margin:0 0 8px;color:#111827;">Request received</h2>
-                <p style="margin:0 0 20px;color:#4b5563;">
-                  We've received your request${title ? ` &mdash; "${title}"` : ''}. Your representative's team will review it and follow up.
+                <h2 style="margin:0 0 12px;color:#111827;">Namaste,</h2>
+                <p style="margin:0 0 16px;color:#4b5563;line-height:1.5;">
+                  Thank you for taking the time to reach out. We've received your request${title ? ` about "${title}"` : ''}, and ${office} will look into it and get back to you soon.
+                </p>
+                <p style="margin:0 0 20px;color:#4b5563;line-height:1.5;">
+                  You can check on its progress anytime using the tracking ID below.
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;border-radius:6px;margin-bottom:24px;">
                   <tr>
@@ -31,10 +35,13 @@ function buildConfirmationHtml({ title, trackingId, trackingUrl }) {
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="border-radius:6px;background:#2563eb;">
-                      <a href="${trackingUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-weight:bold;">Track this request</a>
+                      <a href="${trackingUrl}" style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-weight:bold;">Track My Request</a>
                     </td>
                   </tr>
                 </table>
+                <p style="margin:24px 0 0;color:#9ca3af;font-size:13px;line-height:1.5;">
+                  Thank you for helping us serve you better. This message was sent via Sachivalaya on behalf of ${office}.
+                </p>
               </td>
             </tr>
           </table>
@@ -109,7 +116,7 @@ function createMailer({
     }
   }
 
-  async function sendSubmissionConfirmationEmail({ to, title, trackingId }) {
+  async function sendSubmissionConfirmationEmail({ to, title, trackingId, mpName }) {
     if (!enabled || !to) return { sent: false };
 
     const trackingUrl = `${publicAppUrl.replace(/\/$/, '')}/track/${trackingId}`;
@@ -120,8 +127,8 @@ function createMailer({
       if (!accessToken) throw new Error('Failed to acquire Graph access token');
 
       await postToGraph(accessToken, {
-        subject: `Your request has been received — ${trackingId}`,
-        body: { contentType: 'HTML', content: buildConfirmationHtml({ title, trackingId, trackingUrl }) },
+        subject: `Namaste! We've received your request (Tracking ID: ${trackingId})`,
+        body: { contentType: 'HTML', content: buildConfirmationHtml({ title, trackingId, trackingUrl, mpName }) },
         toRecipients: [{ emailAddress: { address: to } }],
       });
       return { sent: true };

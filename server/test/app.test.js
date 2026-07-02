@@ -104,6 +104,7 @@ test('POST /api/submissions sends a confirmation email when contactEmail is prov
     to: 'citizen@example.com',
     title: 'Broken streetlight',
     trackingId: response.body.trackingId,
+    mpName: 'Test MP',
   });
 });
 

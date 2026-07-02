@@ -100,6 +100,7 @@ az containerapp create \
   --env-vars \
     "DATABASE_URL=secretref:database-url" \
     "MP_ID=${MP_ID}" \
+    "MP_NAME=${MP_DISPLAY_NAME}" \
     "CORS_ORIGIN=${CORS_ORIGIN}" \
     "PUBLIC_APP_URL=${PUBLIC_APP_URL}" \
     "ENTRA_TENANT_ID=${ENTRA_TENANT_ID}" \
