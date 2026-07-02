@@ -45,7 +45,7 @@ test('sendSubmissionConfirmationEmail sends a well-formed Graph request', async 
   });
 
   const result = await mailer.sendSubmissionConfirmationEmail({
-    to: 'citizen@example.com', title: 'Broken streetlight', trackingId: 'ABC123',
+    to: 'citizen@example.com', title: 'Broken streetlight', trackingId: 'ABC123', mpName: 'Jane Doe',
   });
 
   assert.deepEqual(result, { sent: true });
@@ -59,6 +59,28 @@ test('sendSubmissionConfirmationEmail sends a well-formed Graph request', async 
   assert.equal(body.message.toRecipients[0].emailAddress.address, 'citizen@example.com');
   assert.match(body.message.body.content, /ABC123/);
   assert.match(body.message.body.content, /href="https:\/\/mp\.example\.org\/gunaso\/track\/ABC123"/);
+  assert.match(body.message.body.content, /Jane Doe/);
+  assert.match(body.message.body.content, /Sachivalaya/);
+  assert.doesNotMatch(body.message.subject, /—/);
+  assert.doesNotMatch(body.message.body.content, /—/);
+});
+
+test('sendSubmissionConfirmationEmail falls back gracefully when mpName is not provided', async () => {
+  const fakeFetch = createFakeFetch();
+  const mailer = createMailer({
+    fetchImpl: fakeFetch.fn,
+    msalApp: createFakeMsalApp('fake-token'),
+    senderAddress: 'noreply@example.org',
+    publicAppUrl: 'https://mp.example.org/gunaso',
+  });
+
+  await mailer.sendSubmissionConfirmationEmail({
+    to: 'citizen@example.com', title: 'Broken streetlight', trackingId: 'ABC123',
+  });
+
+  const body = JSON.parse(fakeFetch.calls[0].opts.body);
+  assert.match(body.message.body.content, /your representative/i);
+  assert.match(body.message.body.content, /Sachivalaya/);
 });
 
 test('sendSubmissionConfirmationEmail rejects immediately on a non-retryable Graph response', async () => {

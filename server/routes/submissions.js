@@ -50,6 +50,7 @@ function createSubmissionsRouter(store = defaultStore, { resolveTenantMiddleware
             to: created.contactEmail,
             title: created.title,
             trackingId: created.trackingId,
+            mpName: req.mp.name,
           }))
           .catch((err) => console.error('[submissions] Failed to send confirmation email:', err.message));
       }

@@ -8,7 +8,7 @@ function resolveTenant(req, res, next) {
     return res.status(500).json({ error: 'Server misconfiguration: MP_ID not set.' });
   }
 
-  req.mp = { id };
+  req.mp = { id, name: process.env.MP_NAME };
   next();
 }
 
