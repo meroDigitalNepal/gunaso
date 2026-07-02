@@ -127,7 +127,7 @@ function createMailer({
       if (!accessToken) throw new Error('Failed to acquire Graph access token');
 
       await postToGraph(accessToken, {
-        subject: `Namaste! We've received your request (Tracking ID: ${trackingId})`,
+        subject: "We've received your Gunaso",
         body: { contentType: 'HTML', content: buildConfirmationHtml({ title, trackingId, trackingUrl, mpName }) },
         toRecipients: [{ emailAddress: { address: to } }],
       });
