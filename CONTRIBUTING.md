@@ -45,14 +45,14 @@ Push to your fork's `main` branch. That's it:
 
 Three repos are involved, run in this order:
 
-1. **`gunaso/infra/add-mp.sh <name> <uuid>`** (this repo) — seeds the
+1. **`gunaso/infra/add-rep.sh <name> <uuid>`** (this repo) — seeds the
    Representative's row in the database, creates their Azure Container App,
    and creates their GitHub Environment with the required-reviewer approval
    gate and `AZURE_CONTAINER_APP_NAME` secret already wired up. At the end it
    prints the remaining fork checklist (steps 1-4 above).
 2. **Fork setup** (steps above) — fork the repo, enable Actions, issue a PAT,
    set `REP_NAME`/`UPSTREAM_DISPATCH_TOKEN` on the fork.
-3. **`sachivalaya/scripts/add-mp.sh <name>`** (the `sachivalaya` repo) —
+3. **`sachivalaya/scripts/add-rep.sh <name>`** (the `sachivalaya` repo) —
    creates their `<name>.sachivalaya.org` landing page, registers their Azure
    Container App's FQDN in the Cloudflare Worker's KV store, and adds the
    proxied DNS record. This step only depends on the Container App existing
@@ -81,7 +81,7 @@ Rotate or revoke it if they stop contributing.
 
 ### Enabling the approval gate for a new Representative
 
-`infra/add-mp.sh` does this automatically for new Representatives (it prompts
+`infra/add-rep.sh` does this automatically for new Representatives (it prompts
 for the reviewer's GitHub username). To set it up by hand instead — e.g. for
 an environment created before this script existed — either use the UI
 (Settings → Environments → `<rep-name>` → enable **Required reviewers** → add
