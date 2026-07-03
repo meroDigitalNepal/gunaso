@@ -123,6 +123,11 @@ Provisioning helpers live in `infra/`:
 - `add-mp.sh` — onboard a new representative tenant/deployment
 - `add-staff.sh` — grant a staff member access
 
+Deploys run from each representative's own fork via `repository_dispatch`,
+not from a branch in this repo. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+the fork setup and the full end-to-end onboarding runbook (which also covers
+the companion `sachivalaya` repo's Cloudflare/DNS setup).
+
 ## Project Layout
 
 ```

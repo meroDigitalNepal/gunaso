@@ -11,8 +11,8 @@
 # What this script does:
 #   1. Seeds the MP row in the database
 #   2. Creates an Azure Container App for the backend + frontend
-#   3. Creates a GitHub environment and sets its secrets
-#   4. Creates the mp/<name> branch and pushes it
+#   3. Creates a GitHub environment (with required-reviewer approval) and sets its secrets
+#   4. Prints the remaining fork-based deploy setup steps (see CONTRIBUTING.md)
 
 set -euo pipefail
 
@@ -130,25 +130,39 @@ CONTAINER_APP_FQDN=$(az containerapp show \
 
 echo "   Container App URL: https://$CONTAINER_APP_FQDN"
 
-# 3. Create GitHub environment and set secrets ─────────────────────────────────
-echo "→ [3/4] Creating GitHub environment and setting secrets..."
-gh api --method PUT "repos/${GITHUB_REPO}/environments/${MP}" --silent
+# 3. Create GitHub environment with required reviewer, and set secrets ─────────
+echo "→ [3/4] Creating GitHub environment..."
+DEFAULT_REVIEWER="$(gh api user --jq .login)"
+read -rp "GitHub username required to approve ${MP}'s deploys [${DEFAULT_REVIEWER}]: " REVIEWER_LOGIN
+REVIEWER_LOGIN="${REVIEWER_LOGIN:-$DEFAULT_REVIEWER}"
+REVIEWER_ID="$(gh api "users/${REVIEWER_LOGIN}" --jq .id)"
+gh api --method PUT "repos/${GITHUB_REPO}/environments/${MP}" \
+  -f 'reviewers[][type]=User' -F "reviewers[][id]=${REVIEWER_ID}" --silent
+echo "   Deploys to '${MP}' now require ${REVIEWER_LOGIN}'s approval."
 
 gh secret set AZURE_CONTAINER_APP_NAME \
   --env "$MP" --repo "$GITHUB_REPO" --body "$CONTAINER_APP_NAME"
 
-# 4. Create branch and push ───────────────────────────────────────────────────
-echo "→ [4/4] Creating branch mp/${MP}..."
-CURRENT_BRANCH=$(git branch --show-current)
-git checkout main
-git checkout -b "mp/${MP}" 2>/dev/null || git checkout "mp/${MP}"
-git push -u origin "mp/${MP}"
-git checkout "$CURRENT_BRANCH"
+# 4. Fork-based deploy setup ───────────────────────────────────────────────────
+# This repo has no branch-push deploy trigger anymore — ${MP} deploys from
+# their own fork via repository_dispatch. Forking and PAT issuance can't be
+# scripted (they require a human on GitHub's website), so print the checklist.
+echo "→ [4/4] Remaining setup (manual — see CONTRIBUTING.md):"
+echo "   1. Fork ${GITHUB_REPO} — to ${MP}'s personal account, or an org-owned"
+echo "      fork (e.g. ${GITHUB_REPO%/*}/${GITHUB_REPO#*/}-${MP})."
+echo "   2. Enable Actions on that fork: Settings → Actions → General."
+echo "   3. Generate a fine-grained PAT scoped to only ${GITHUB_REPO} with"
+echo "      'Contents: Read and write' permission:"
+echo "      https://github.com/settings/personal-access-tokens/new"
+echo "   4. On the fork, set repository variable REP_NAME=${MP} and repository"
+echo "      secret UPSTREAM_DISPATCH_TOKEN=<the PAT from step 3>."
 
 echo ""
 echo "✅ ${MP} setup complete."
 echo ""
-echo "GitHub Actions will run on the next push to mp/${MP}."
+echo "Once the fork is set up, a push to its main branch triggers a deploy that"
+echo "pauses for ${REVIEWER_LOGIN}'s approval. Until then, deploy manually via:"
+echo "  gh workflow run azure-deploy.yml -f rep=${MP}"
 echo "App will be available at: https://${CONTAINER_APP_FQDN}/gunaso"
 echo ""
 echo "To add a custom domain (${MP}.sachivalaya.org), configure it in:"

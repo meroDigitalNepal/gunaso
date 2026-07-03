@@ -9,12 +9,20 @@ the main repo; all deploys go through a Representative's fork.
 
 ### One-time setup (Representative)
 
-1. Fork `meroDigitalNepal/gunaso` on GitHub.
-2. In your fork's Settings → Actions → General, enable Actions (GitHub
+1. Fork `meroDigitalNepal/gunaso` on GitHub — to your own personal account, or
+   as a repo under the `meroDigitalNepal` org if you'd rather it stay under
+   the org's governance (e.g. `meroDigitalNepal/gunaso-sasmit`). Either works
+   identically for the deploy pipeline; an org-owned fork just means a
+   maintainer adds you as a collaborator on that one repo instead of nothing
+   being granted at all.
+2. In the fork's Settings → Actions → General, enable Actions (GitHub
    disables Actions on new forks by default).
 3. Ask a maintainer for a scoped Personal Access Token (see "Issuing a token"
    below).
-4. In your fork's Settings → Secrets and variables → Actions:
+4. In the fork's Settings → Secrets and variables → Actions — these must be
+   **repository** secrets/variables, not environment-scoped (the notify
+   workflow doesn't declare an `environment:`, so it can't see anything set
+   at that level):
    - Add variable `REP_NAME` set to your name as used in the main repo's
      GitHub Environments (e.g. `sasmit`).
    - Add secret `UPSTREAM_DISPATCH_TOKEN` set to the token from step 3.
@@ -32,6 +40,24 @@ Push to your fork's `main` branch. That's it:
    Container App.
 
 ## Maintainers
+
+### Onboarding a new Representative end-to-end
+
+Three repos are involved, run in this order:
+
+1. **`gunaso/infra/add-mp.sh <name> <uuid>`** (this repo) — seeds the
+   Representative's row in the database, creates their Azure Container App,
+   and creates their GitHub Environment with the required-reviewer approval
+   gate and `AZURE_CONTAINER_APP_NAME` secret already wired up. At the end it
+   prints the remaining fork checklist (steps 1-4 above).
+2. **Fork setup** (steps above) — fork the repo, enable Actions, issue a PAT,
+   set `REP_NAME`/`UPSTREAM_DISPATCH_TOKEN` on the fork.
+3. **`sachivalaya/scripts/add-mp.sh <name>`** (the `sachivalaya` repo) —
+   creates their `<name>.sachivalaya.org` landing page, registers their Azure
+   Container App's FQDN in the Cloudflare Worker's KV store, and adds the
+   proxied DNS record. This step only depends on the Container App existing
+   (step 1) — it's unaffected by whether the fork/deploy pipeline is finished,
+   since it just looks up the Container App's current FQDN.
 
 ### Manually triggering a deploy
 
@@ -55,7 +81,19 @@ Rotate or revoke it if they stop contributing.
 
 ### Enabling the approval gate for a new Representative
 
-Settings → Environments → `<rep-name>` → enable **Required reviewers** → add
-the maintainer(s) who should approve deploys. This applies regardless of
-whether the run was triggered by a fork's dispatch or a manual
-`workflow_dispatch` run.
+`infra/add-mp.sh` does this automatically for new Representatives (it prompts
+for the reviewer's GitHub username). To set it up by hand instead — e.g. for
+an environment created before this script existed — either use the UI
+(Settings → Environments → `<rep-name>` → enable **Required reviewers** → add
+reviewers) or run:
+
+```bash
+REVIEWER_ID="$(gh api users/<github-username> --jq .id)"
+gh api --method PUT repos/meroDigitalNepal/gunaso/environments/<rep-name> \
+  -f 'reviewers[][type]=User' -F "reviewers[][id]=${REVIEWER_ID}"
+```
+
+This applies regardless of whether the run was triggered by a fork's dispatch
+or a manual `workflow_dispatch` run. Note: required reviewers on environments
+only works because this repo is public — GitHub gates this feature behind a
+paid plan for private repos.
