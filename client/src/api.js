@@ -11,8 +11,12 @@ export function setTokenGetter(fn) {
   tokenGetter = fn;
 }
 
-async function request(method, path, body) {
-  const headers = { 'Content-Type': 'application/json' };
+async function request(method, path, body, extraHeaders = {}) {
+  // FormData sets its own multipart boundary in the Content-Type header —
+  // setting it manually here would break that boundary.
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  const headers = { ...extraHeaders };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
 
   if (tokenGetter) {
     const token = await tokenGetter();
@@ -26,7 +30,7 @@ async function request(method, path, body) {
   }
 
   const opts = { method, headers };
-  if (body) opts.body = JSON.stringify(body);
+  if (body) opts.body = isFormData ? body : JSON.stringify(body);
 
   const res = await fetch(`${BASE}${path}`, opts);
   const data = await res.json();
@@ -34,8 +38,40 @@ async function request(method, path, body) {
   return data;
 }
 
+// A plain <a href> can't carry the Authorization header on staff-only
+// downloads — fetch as a blob with the same auth headers instead, then hand
+// the caller an object URL to trigger the browser's save dialog with.
+async function requestBlob(path) {
+  const headers = {};
+  if (tokenGetter) {
+    const token = await tokenGetter();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (import.meta.env.DEV && import.meta.env.VITE_TENANT_SUBDOMAIN) {
+    headers['X-Tenant-Subdomain'] = import.meta.env.VITE_TENANT_SUBDOMAIN;
+  }
+
+  const res = await fetch(`${BASE}${path}`, { headers });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'Request failed');
+  }
+  return res.blob();
+}
+
 export const api = {
-  createSubmission: (body) => request('POST', '/api/submissions', body),
+  getAttachmentBlob: (id) => requestBlob(`/api/submissions/${id}/attachment`),
+  // Sends multipart/form-data so an optional attachment can travel alongside
+  // the text fields. turnstileToken goes in a header, not the form body, so
+  // the server can verify CAPTCHA before it has to buffer any file bytes.
+  createSubmission: ({ turnstileToken, attachment, ...fields }) => {
+    const formData = new FormData();
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') formData.append(key, value);
+    });
+    if (attachment) formData.append('attachment', attachment);
+    return request('POST', '/api/submissions', formData, { 'X-Turnstile-Token': turnstileToken || '' });
+  },
   listSubmissions: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request('GET', `/api/submissions${qs ? '?' + qs : ''}`);

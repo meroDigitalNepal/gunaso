@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('path');
 const request = require('supertest');
 const rateLimit = require('express-rate-limit');
 
@@ -23,6 +24,21 @@ function noOpRateLimit(req, res, next) {
 }
 function alwaysAllowTurnstile() {
   return { verifyToken: async () => true };
+}
+
+function createFakeBlobStorage({ enabled = true } = {}) {
+  const uploads = [];
+  return {
+    uploads,
+    async uploadAttachment(args) {
+      uploads.push(args);
+      if (!enabled) return null;
+      return `${args.mpId}/${args.submissionId}/fake-blob-${args.originalFileName}`;
+    },
+    async streamAttachment() {
+      throw new Error('not used in these tests');
+    },
+  };
 }
 
 function createMemoryStore(initialSubmissions = []) {
@@ -349,4 +365,184 @@ test('POST /api/submissions rejects requests that fail CAPTCHA verification', as
   assert.equal(response.status, 400);
   assert.match(response.body.error, /CAPTCHA/i);
   assert.equal(store.submissions.length, 0);
+});
+
+test('POST /api/submissions reads the CAPTCHA token from the X-Turnstile-Token header', async () => {
+  const store = createMemoryStore();
+  let receivedToken = null;
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: { verifyToken: async (token) => { receivedToken = token; return true; } },
+  });
+
+  await request(app)
+    .post('/api/submissions')
+    .set('X-Turnstile-Token', 'header-token-value')
+    .send({ title: 'Broken streetlight', category: 'infrastructure', description: 'desc' });
+
+  assert.equal(receivedToken, 'header-token-value');
+});
+
+test('POST /api/submissions succeeds without an attachment (all attachment fields null)', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+  });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc');
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.attachmentFileName, null);
+  assert.equal(response.body.attachmentBlobPath, null);
+});
+
+test('POST /api/submissions uploads a valid attachment and stores its metadata', async () => {
+  const store = createMemoryStore();
+  const blobStorage = createFakeBlobStorage();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+    blobStorage,
+  });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc')
+    .attach('attachment', path.join(__dirname, 'fixtures', 'sample.png'));
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.attachmentFileName, 'sample.png');
+  assert.equal(response.body.attachmentContentType, 'image/png');
+  assert.equal(blobStorage.uploads.length, 1);
+  assert.equal(blobStorage.uploads[0].contentType, 'image/png');
+});
+
+test('POST /api/submissions accepts a real docx attachment', async () => {
+  const store = createMemoryStore();
+  const blobStorage = createFakeBlobStorage();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+    blobStorage,
+  });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc')
+    .attach('attachment', path.join(__dirname, 'fixtures', 'sample.docx'));
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.attachmentContentType, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+});
+
+test('POST /api/submissions rejects an oversized attachment', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+    blobStorage: createFakeBlobStorage(),
+  });
+
+  const oversized = Buffer.alloc(6 * 1024 * 1024, 1);
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc')
+    .attach('attachment', oversized, 'huge.png');
+
+  assert.equal(response.status, 400);
+  assert.match(response.body.error, /5MB/i);
+  assert.equal(store.submissions.length, 0);
+});
+
+test('POST /api/submissions rejects more than one attachment', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+    blobStorage: createFakeBlobStorage(),
+  });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc')
+    .attach('attachment', path.join(__dirname, 'fixtures', 'sample.png'))
+    .attach('attachment', path.join(__dirname, 'fixtures', 'sample.pdf'));
+
+  assert.equal(response.status, 400);
+  assert.match(response.body.error, /one file/i);
+});
+
+test('POST /api/submissions rejects a file whose real content does not match an allowed type', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+    blobStorage: createFakeBlobStorage(),
+  });
+
+  // Plain text disguised with a .jpg filename and an image content-type —
+  // the declared type must be ignored in favor of the real magic bytes.
+  const disguised = Buffer.from('this is not actually an image, just plain text padded out');
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc')
+    .attach('attachment', disguised, { filename: 'photo.jpg', contentType: 'image/jpeg' });
+
+  assert.equal(response.status, 400);
+  assert.match(response.body.error, /JPG, PNG, WEBP, PDF, DOC, or DOCX/);
+  assert.equal(store.submissions.length, 0);
+});
+
+test('POST /api/submissions succeeds with attachment fields left null when blob storage is unconfigured', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, {
+    resolveTenantMiddleware: mockTenant,
+    submissionRateLimit: noOpRateLimit,
+    turnstileVerifier: alwaysAllowTurnstile(),
+    blobStorage: createFakeBlobStorage({ enabled: false }),
+  });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .field('title', 'Broken streetlight')
+    .field('category', 'infrastructure')
+    .field('description', 'desc')
+    .attach('attachment', path.join(__dirname, 'fixtures', 'sample.png'));
+
+  assert.equal(response.status, 201);
+  assert.equal(response.body.attachmentFileName, null);
+  assert.equal(response.body.attachmentBlobPath, null);
+});
+
+test('GET /api/submissions/:id/attachment requires staff auth', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, { resolveTenantMiddleware: mockTenant });
+
+  const response = await request(app).get('/api/submissions/some-id/attachment');
+
+  assert.equal(response.status, 401);
 });

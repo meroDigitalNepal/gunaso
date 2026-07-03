@@ -26,6 +26,7 @@ export default function RequestDetail() {
   const [status, setStatus] = useState('');
   const [publicResponse, setPublicResponse] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
+  const [downloadError, setDownloadError] = useState(null);
 
   useEffect(() => {
     fetchSubmission();
@@ -44,6 +45,23 @@ export default function RequestDetail() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDownloadAttachment() {
+    setDownloadError(null);
+    try {
+      const blob = await api.getAttachmentBlob(id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = submission.attachmentFileName || 'attachment';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDownloadError(err.message);
     }
   }
 
@@ -94,6 +112,14 @@ export default function RequestDetail() {
           <Text size="sm" subtle style={{ marginTop: '14px' }}>
             Contact: <a href={`mailto:${submission.contactEmail}`}>{submission.contactEmail}</a>
           </Text>
+        )}
+        {submission.attachmentFileName && (
+          <div style={{ marginTop: '14px' }}>
+            <Button variant="secondary" onClick={handleDownloadAttachment}>
+              Download attachment ({submission.attachmentFileName})
+            </Button>
+            {downloadError && <Alert style={{ marginTop: '8px' }}>{downloadError}</Alert>}
+          </div>
         )}
       </Card>
 

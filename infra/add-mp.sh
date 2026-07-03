@@ -32,6 +32,8 @@ CONTAINER_ENV="gunaso-env"
 ACR_NAME="gunasoregistry"
 # Shared across all MP branches — one Graph app registration + sender mailbox
 MAIL_SENDER_ADDRESS="noreply@sachivalaya.org"
+# Shared across all MP branches — one Storage Account + container
+AZURE_STORAGE_CONTAINER="submission-attachments"
 # ─────────────────────────────────────────────────────────────────────────────
 
 CONTAINER_APP_NAME="gunaso-${MP}"
@@ -50,6 +52,8 @@ echo ""
 read -rsp "GRAPH_CLIENT_SECRET (from the gunaso-mail app registration): " GRAPH_CLIENT_SECRET
 echo ""
 read -rsp "TURNSTILE_SECRET_KEY (from the Cloudflare Turnstile dashboard): " TURNSTILE_SECRET_KEY
+echo ""
+read -rsp "AZURE_STORAGE_CONNECTION_STRING (from the shared Storage Account): " AZURE_STORAGE_CONNECTION_STRING
 echo ""
 echo ""
 
@@ -100,6 +104,7 @@ az containerapp create \
     "database-url=${DATABASE_URL}" \
     "graph-client-secret=${GRAPH_CLIENT_SECRET}" \
     "turnstile-secret-key=${TURNSTILE_SECRET_KEY}" \
+    "azure-storage-connection-string=${AZURE_STORAGE_CONNECTION_STRING}" \
   --env-vars \
     "DATABASE_URL=secretref:database-url" \
     "MP_ID=${MP_ID}" \
@@ -112,6 +117,8 @@ az containerapp create \
     "GRAPH_CLIENT_SECRET=secretref:graph-client-secret" \
     "MAIL_SENDER_ADDRESS=${MAIL_SENDER_ADDRESS}" \
     "TURNSTILE_SECRET_KEY=secretref:turnstile-secret-key" \
+    "AZURE_STORAGE_CONNECTION_STRING=secretref:azure-storage-connection-string" \
+    "AZURE_STORAGE_CONTAINER=${AZURE_STORAGE_CONTAINER}" \
     "NODE_ENV=production" \
     "PORT=3001" \
   --output none
