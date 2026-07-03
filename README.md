@@ -66,6 +66,8 @@ cd server && npm test
 | `MAIL_SENDER_ADDRESS` | Mailbox confirmation emails are sent from |
 | `PUBLIC_APP_URL` | Canonical public URL used to build tracking links in emails — set per branch/deployment |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key, verifies the CAPTCHA on submission — same for all MP branches |
+| `AZURE_STORAGE_CONNECTION_STRING` | Azure Storage connection string for the optional attachment upload — same for all MP branches |
+| `AZURE_STORAGE_CONTAINER` | Blob container name for attachments (default `submission-attachments`) |
 | `PORT` | Server port (default `3001`) |
 
 Confirmation emails are sent via the Microsoft Graph API using app-only
@@ -83,6 +85,15 @@ local dev. The mailer additionally has a circuit breaker: after 3 consecutive
 send failures it stops attempting new sends for 60 seconds, then allows one
 trial send before resuming normally — this protects the shared Graph mailbox
 quota from being burned by a sustained outage or abuse burst.
+
+Citizens may attach one optional file (JPG, PNG, WEBP, PDF, DOC, or DOCX, up
+to 5MB) to a submission. Files are sniffed by their actual byte signature
+(never trusted from the client-declared content type) and stored in Azure
+Blob Storage, namespaced by `mp_id`/submission ID. If
+`AZURE_STORAGE_CONNECTION_STRING` is unset, attachment uploads are skipped
+(logged as a warning) — the submission itself still succeeds. Attachments are
+staff-only: they're never included in the public tracking response, and
+downloading one (`GET /api/submissions/:id/attachment`) requires staff auth.
 
 ### Client (`client/.env`, `VITE_`-prefixed)
 | Variable | Description |

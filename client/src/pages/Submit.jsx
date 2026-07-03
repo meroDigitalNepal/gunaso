@@ -14,9 +14,13 @@ const CATEGORIES = [
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 const TURNSTILE_SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_ATTACHMENT_TYPES = '.jpg,.jpeg,.png,.webp,.pdf,.doc,.docx';
 
 export default function Submit() {
   const [form, setForm] = useState({ title: '', category: '', description: '', contactEmail: '' });
+  const [attachment, setAttachment] = useState(null);
+  const [attachmentError, setAttachmentError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
@@ -62,6 +66,19 @@ export default function Submit() {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
   }
 
+  // Client-side size check is UX only — the server enforces the real limit.
+  function handleAttachmentChange(e) {
+    const file = e.target.files[0] || null;
+    if (file && file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError('File must be 5MB or smaller.');
+      setAttachment(null);
+      e.target.value = '';
+      return;
+    }
+    setAttachmentError(null);
+    setAttachment(file);
+  }
+
   async function handleCopy() {
     await navigator.clipboard.writeText(result.trackingId);
     setCopied(true);
@@ -73,7 +90,7 @@ export default function Submit() {
     setError(null);
     setLoading(true);
     try {
-      const submission = await api.createSubmission({ ...form, turnstileToken });
+      const submission = await api.createSubmission({ ...form, turnstileToken, attachment });
       setResult(submission);
     } catch (err) {
       setError(err.message);
@@ -209,6 +226,14 @@ export default function Submit() {
             value={form.contactEmail} onChange={handleChange}
             hint="We'll only use this to follow up on your Gunaso."
           />
+
+          <Input
+            label="Attachment (optional)" name="attachment" type="file"
+            accept={ACCEPTED_ATTACHMENT_TYPES}
+            onChange={handleAttachmentChange}
+            hint="JPG, PNG, WEBP, PDF, DOC, or DOCX — up to 5MB."
+          />
+          {attachmentError && <Alert>{attachmentError}</Alert>}
 
           {TURNSTILE_SITE_KEY && <div ref={turnstileRef} />}
 
