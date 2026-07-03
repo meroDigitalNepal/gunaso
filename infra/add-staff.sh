@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Add a staff or admin user for an MP.
-# Run from the repo root after add-mp.sh has been run.
+# Add a staff or admin user for a Representative.
+# Run from the repo root after add-rep.sh has been run.
 #
 # Usage:
 #   ./infra/add-staff.sh
@@ -16,7 +16,7 @@ DB_ADMIN_USER="gunasodbadmin"
 # ─────────────────────────────────────────────────────────────────────────────
 
 read -rp "Staff email (their Microsoft account): " STAFF_EMAIL
-read -rp "MP subdomain (e.g. john): " MP_SUBDOMAIN
+read -rp "Representative subdomain (e.g. john): " REP_SUBDOMAIN
 read -rp "Role [admin/staff] (default: staff): " ROLE
 ROLE="${ROLE:-staff}"
 
@@ -42,28 +42,28 @@ fi
 echo "   OID: $ENTRA_OID"
 
 echo ""
-echo "Looking up MP ID for subdomain '${MP_SUBDOMAIN}'..."
+echo "Looking up Representative ID for subdomain '${REP_SUBDOMAIN}'..."
 read -rsp "Database admin password: " DB_ADMIN_PASSWORD
 echo ""
 DATABASE_URL="postgresql://${DB_ADMIN_USER}:${DB_ADMIN_PASSWORD}@${DB_SERVER}.postgres.database.azure.com:5432/${DB_NAME}?sslmode=require"
 
-PARL_ID=$(psql "$DATABASE_URL" -t -A -c \
-  "SELECT id FROM mps WHERE subdomain = '${MP_SUBDOMAIN}'" 2>/dev/null || true)
+REP_ID=$(psql "$DATABASE_URL" -t -A -c \
+  "SELECT id FROM mps WHERE subdomain = '${REP_SUBDOMAIN}'" 2>/dev/null || true)
 
-if [[ -z "$PARL_ID" ]]; then
-  echo "Error: no MP found with subdomain '${MP_SUBDOMAIN}'."
-  echo "Run add-mp.sh first, or check the subdomain spelling."
+if [[ -z "$REP_ID" ]]; then
+  echo "Error: no Representative found with subdomain '${REP_SUBDOMAIN}'."
+  echo "Run add-rep.sh first, or check the subdomain spelling."
   exit 1
 fi
-echo "   MP ID: $PARL_ID"
+echo "   Representative ID: $REP_ID"
 
 echo ""
 psql "$DATABASE_URL" -c "
   INSERT INTO users (id, entra_oid, mp_id, role)
-  VALUES (gen_random_uuid(), '${ENTRA_OID}', '${PARL_ID}', '${ROLE}')
+  VALUES (gen_random_uuid(), '${ENTRA_OID}', '${REP_ID}', '${ROLE}')
   ON CONFLICT (entra_oid) DO UPDATE SET role = EXCLUDED.role;
 "
 
 echo ""
-echo "✅ ${STAFF_EMAIL} added as ${ROLE} for ${MP_SUBDOMAIN}."
-echo "   They can now sign in at https://${MP_SUBDOMAIN}.sachivalaya.org/gunaso/login"
+echo "✅ ${STAFF_EMAIL} added as ${ROLE} for ${REP_SUBDOMAIN}."
+echo "   They can now sign in at https://${REP_SUBDOMAIN}.sachivalaya.org/gunaso/login"

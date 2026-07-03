@@ -61,12 +61,12 @@ cd server && npm test
 | `ENTRA_TENANT_ID` | Microsoft Entra tenant ID (token validation) |
 | `ENTRA_CLIENT_ID` | Entra app/client ID (token audience) |
 | `CORS_ORIGIN` | Allowed origin (e.g. `http://localhost:5173`) |
-| `GRAPH_CLIENT_ID` | Graph mail app client ID (app-only, `Mail.Send`) — same for all MP branches |
+| `GRAPH_CLIENT_ID` | Graph mail app client ID (app-only, `Mail.Send`) — same for all Representative deployments |
 | `GRAPH_CLIENT_SECRET` | Client secret for the Graph mail app |
 | `MAIL_SENDER_ADDRESS` | Mailbox confirmation emails are sent from |
 | `PUBLIC_APP_URL` | Canonical public URL used to build tracking links in emails — set per branch/deployment |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key, verifies the CAPTCHA on submission — same for all MP branches |
-| `AZURE_STORAGE_CONNECTION_STRING` | Azure Storage connection string for the optional attachment upload — same for all MP branches |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key, verifies the CAPTCHA on submission — same for all Representative deployments |
+| `AZURE_STORAGE_CONNECTION_STRING` | Azure Storage connection string for the optional attachment upload — same for all Representative deployments |
 | `AZURE_STORAGE_CONTAINER` | Blob container name for attachments (default `submission-attachments`) |
 | `PORT` | Server port (default `3001`) |
 
@@ -120,8 +120,13 @@ All routes are mounted under both `/api/submissions` (dev) and `/gunaso/api/subm
 Provisioning helpers live in `infra/`:
 
 - `provision-shared.sh` — set up shared infrastructure
-- `add-mp.sh` — onboard a new representative tenant/deployment
+- `add-rep.sh` — onboard a new representative tenant/deployment
 - `add-staff.sh` — grant a staff member access
+
+Deploys run from each representative's own fork via `repository_dispatch`,
+not from a branch in this repo. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+the fork setup and the full end-to-end onboarding runbook (which also covers
+the companion `sachivalaya` repo's Cloudflare/DNS setup).
 
 ## Project Layout
 
