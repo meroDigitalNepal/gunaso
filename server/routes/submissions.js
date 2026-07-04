@@ -10,6 +10,7 @@ const defaultMailer = require('../utils/mailer');
 const defaultTurnstileVerifier = require('../utils/turnstile');
 const defaultBlobStorage = require('../utils/blobStorage');
 
+const CATEGORIES = ['infrastructure', 'health', 'education', 'security', 'other'];
 const STATUSES = ['new', 'in_review', 'resolved'];
 
 const ALLOWED_ATTACHMENT_TYPES = new Set([
@@ -69,10 +70,15 @@ function createSubmissionsRouter(store = defaultStore, {
     },
     upload.single('attachment'),
     async (req, res) => {
-      const { title, description, contactEmail } = req.body;
+      const { title, category, description, contactEmail } = req.body;
 
       if (!title || !description) {
         return res.status(400).json({ error: 'title and description are required' });
+      }
+      // Category is optional while it's hidden from the UI, but still validated
+      // when supplied so the column stays clean for when it's surfaced again.
+      if (category && !CATEGORIES.includes(category)) {
+        return res.status(400).json({ error: `category must be one of: ${CATEGORIES.join(', ')}` });
       }
 
       // Never trust req.file.mimetype — it's just the client's declared
@@ -130,6 +136,7 @@ function createSubmissionsRouter(store = defaultStore, {
           id: submissionId,
           trackingId: uuidv4().toUpperCase(),
           title,
+          category: category || null,
           description,
           contactEmail: contactEmail || null,
           status: 'new',
@@ -165,9 +172,10 @@ function createSubmissionsRouter(store = defaultStore, {
   // GET /api/submissions — admin only
   router.get('/', resolveTenantMiddleware, requireAuth, requireRole('staff'), async (req, res) => {
     try {
-      const { status } = req.query;
+      const { status, category } = req.query;
       const filters = {};
       if (status) filters.status = status;
+      if (category) filters.category = category;
       const submissions = await store.getAll(req.mp.id, filters);
       res.json(submissions);
     } catch (err) {
@@ -184,8 +192,8 @@ function createSubmissionsRouter(store = defaultStore, {
       );
       if (!submission) return res.status(404).json({ error: 'Submission not found' });
 
-      const { id, trackingId, title, description, status, createdAt, updatedAt, publicResponse, attachmentFileName } = submission;
-      res.json({ id, trackingId, title, description, status, createdAt, updatedAt, publicResponse, attachmentFileName });
+      const { id, trackingId, title, category, description, status, createdAt, updatedAt, publicResponse, attachmentFileName } = submission;
+      res.json({ id, trackingId, title, category, description, status, createdAt, updatedAt, publicResponse, attachmentFileName });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

@@ -53,6 +53,7 @@ function createMemoryStore(initialSubmissions = []) {
       return submissions.filter(s => {
         if (s.mpId !== mpId) return false;
         if (filters.status && s.status !== filters.status) return false;
+        if (filters.category && s.category !== filters.category) return false;
         return true;
       });
     },
@@ -201,6 +202,39 @@ test('POST /api/submissions rejects requests missing required fields', async () 
   assert.equal(store.submissions.length, 0);
 });
 
+test('POST /api/submissions rejects an invalid category when one is supplied', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, { resolveTenantMiddleware: mockTenant, submissionRateLimit: noOpRateLimit, turnstileVerifier: alwaysAllowTurnstile() });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .send({
+      title: 'Invalid category',
+      category: 'transport',
+      description: 'Should fail validation.',
+    });
+
+  assert.equal(response.status, 400);
+  assert.match(response.body.error, /category must be one of/i);
+  assert.equal(store.submissions.length, 0);
+});
+
+test('POST /api/submissions stores a null category when none is supplied', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, { resolveTenantMiddleware: mockTenant, submissionRateLimit: noOpRateLimit, turnstileVerifier: alwaysAllowTurnstile() });
+
+  const response = await request(app)
+    .post('/api/submissions')
+    .send({
+      title: 'No category',
+      description: 'Category is optional now.',
+    });
+
+  assert.equal(response.status, 201);
+  assert.equal(store.submissions.length, 1);
+  assert.equal(store.submissions[0].category, null);
+});
+
 test('GET /api/submissions passes dashboard filters to the store', async () => {
   const store = createMemoryStore([
     {
@@ -241,7 +275,7 @@ test('GET /api/submissions passes dashboard filters to the store', async () => {
   // admin routes return 401 without a token, which is correct behaviour to test here).
   const response = await request(app)
     .get('/api/submissions')
-    .query({ status: 'new' })
+    .query({ status: 'new', category: 'health' })
     .set('Authorization', 'Bearer skip-for-unit-test');
 
   // 401 is expected without a real Entra token — this test confirms the route is protected.
