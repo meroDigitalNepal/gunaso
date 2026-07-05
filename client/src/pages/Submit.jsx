@@ -58,6 +58,13 @@ export default function Submit() {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
   }
 
+  // Phone accepts digits only — strip anything else as the user types so the
+  // stored value is always a bare number.
+  function handlePhoneChange(e) {
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+    setForm(f => ({ ...f, contactPhone: digitsOnly }));
+  }
+
   // Client-side size check is UX only — the server enforces the real limit.
   function handleAttachmentChange(e) {
     const file = e.target.files[0] || null;
@@ -214,9 +221,10 @@ export default function Submit() {
 
           <Input
             label="Phone" name="contactPhone" type="tel"
+            inputMode="numeric" pattern="[0-9]*"
             placeholder="98XXXXXXXX"
-            value={form.contactPhone} onChange={handleChange}
-            hint="Optional — we'll only use this to follow up on your Gunaso."
+            value={form.contactPhone} onChange={handlePhoneChange}
+            hint="Optional — digits only. We'll only use this to follow up on your Gunaso."
           />
 
           <Input
