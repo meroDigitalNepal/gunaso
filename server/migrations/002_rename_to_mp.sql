@@ -1,6 +1,5 @@
-ALTER TABLE parliamentarians RENAME TO mps;
-ALTER TABLE users RENAME COLUMN parliamentarian_id TO mp_id;
-ALTER TABLE submissions RENAME COLUMN parliamentarian_id TO mp_id;
-ALTER INDEX idx_submissions_parliamentarian RENAME TO idx_submissions_mp;
-ALTER INDEX idx_submissions_parliamentarian_status RENAME TO idx_submissions_mp_status;
-ALTER INDEX idx_submissions_parliamentarian_created RENAME TO idx_submissions_mp_created;
+-- This migration originally performed a rename to align with the mp/MP_ID
+-- naming. 001_initial_schema.sql now creates that final schema directly, so
+-- this migration is a no-op — kept only so the migrations table's
+-- filename-based history stays intact for environments that already applied it.
+SELECT 1;
