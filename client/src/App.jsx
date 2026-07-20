@@ -22,9 +22,9 @@ function Nav() {
           Gunaso
         </NavLink>
         <ul className="nav-links">
-          <li><NavLink to="/dashboard">Dashboard</NavLink></li>
           <li><NavLink to="/submit">Submit</NavLink></li>
           <li><NavLink to="/track">Track</NavLink></li>
+          <li><NavLink to="/dashboard">Dashboard</NavLink></li>
           <AuthenticatedTemplate>
             <li><NavLink to="/control-room">Control Room</NavLink></li>
             <li>
@@ -36,7 +36,7 @@ function Nav() {
           <UnauthenticatedTemplate>
             <li>
               <Button variant="ghost" size="sm" onClick={login}>
-                Admin Login
+                Admin
               </Button>
             </li>
           </UnauthenticatedTemplate>
