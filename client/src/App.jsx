@@ -12,7 +12,7 @@ import ControlRoom from './pages/ControlRoom';
 import RequestDetail from './pages/RequestDetail';
 import Login from './pages/Login';
 
-function Nav() {
+export function Nav() {
   const { user, login, logout } = useAuth();
 
   return (
@@ -46,7 +46,7 @@ function Nav() {
   );
 }
 
-function AppRoutes() {
+export function AppRoutes() {
   return (
     <>
       <Nav />

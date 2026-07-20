@@ -323,6 +323,36 @@ test('GET /api/submissions/stats returns public aggregate counts without auth', 
   assert.equal(JSON.stringify(response.body).includes('secret'), false);
 });
 
+test('GET /api/submissions/stats returns zeroed counts for an empty tenant', async () => {
+  const store = createMemoryStore();
+  const app = createApp(store, { resolveTenantMiddleware: mockTenant, submissionRateLimit: noOpRateLimit, turnstileVerifier: alwaysAllowTurnstile() });
+
+  const response = await request(app).get('/api/submissions/stats');
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.total, 0);
+  assert.deepEqual(response.body.byStatus, { new: 0, in_review: 0, resolved: 0 });
+  assert.deepEqual(response.body.byCategory, { infrastructure: 0, health: 0, education: 0, security: 0, other: 0 });
+  assert.equal(response.body.uncategorized, 0);
+});
+
+test('GET /api/submissions/stats is not shadowed by the auth-protected /:id route', async () => {
+  // /stats must be registered before /:id — otherwise "stats" is treated as a
+  // submission id and the request hits the staff-only handler, turning the
+  // public dashboard endpoint into a 401. Guard that ordering here.
+  const store = createMemoryStore([
+    { id: 'stats', trackingId: 't1', mpId: MP_ID, title: 'A', description: 'x', status: 'new', category: 'health' },
+  ]);
+  const app = createApp(store, { resolveTenantMiddleware: mockTenant, submissionRateLimit: noOpRateLimit, turnstileVerifier: alwaysAllowTurnstile() });
+
+  const response = await request(app).get('/api/submissions/stats');
+
+  assert.equal(response.status, 200);
+  // Aggregate shape, not a single submission — confirms the /stats handler ran.
+  assert.ok(response.body.byStatus, 'expected aggregate byStatus, got a submission');
+  assert.equal(response.body.trackingId, undefined);
+});
+
 test('GET /api/submissions/track/:trackingId hides internal-only fields', async () => {
   const store = createMemoryStore([
     {
