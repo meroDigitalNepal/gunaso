@@ -49,5 +49,23 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  client:
+    build:
+      context: .
+      target: client-dev
+    ports:
+      - "5173:5173"
+    # Bind-mount the source for hot-reload; the anonymous volume keeps the
+    # image's node_modules from being shadowed by the host mount. Vite loads
+    # client/.env from the mount just like a native `npm run dev`.
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    # In dev the browser calls the API directly at http://localhost:3001
+    # (see client/src/api.js), which is the server's published port — so the
+    # client only needs the server running, not a proxy rewrite.
+    depends_on:
+      - server
+
 volumes:
   postgres_data:
