@@ -3,7 +3,7 @@
  * @mero-nepal/ui's own `ui.*` tokens; the i18n index merges these on top of the
  * library's base locale tokens so `useLocale().t(key)` resolves both.
  *
- * When you add a string here, add the same key to ne.js / newari.js / mai.js.
+ * When you add a string here, add the same key to ne.js / newari.js.
  */
 
 export default {

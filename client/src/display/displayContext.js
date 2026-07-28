@@ -17,8 +17,8 @@ export const THEMES = {
   dark: { label: 'Dark', theme: createTheme({ extends: 'safa-dark' }) },
 };
 
-// English, Nepali, Newari (Nepal Bhasa), and Maithili. The locale objects (base
-// ui.* tokens + our app strings) are built in ../i18n.
+// English, Nepali, and Newari (Nepal Bhasa). The locale objects (base ui.*
+// tokens + our app strings) are built in ../i18n.
 export { LOCALES };
 
 export const THEME_STORAGE_KEY = 'gunaso.theme';
